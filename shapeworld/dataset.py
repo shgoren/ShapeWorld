@@ -1,9 +1,10 @@
 from importlib import import_module
 from io import BytesIO
 import json
+import pprint
 from math import ceil, sqrt
 import os
-from random import random, randrange
+from random import random, randrange, shuffle
 import numpy as np
 from PIL import Image
 from shapeworld import util
@@ -830,3 +831,96 @@ class CaptionAgreementDataset(Dataset):
             data=''.join(data_html)
         )
         return html
+
+
+class TextSelectionDataset(CaptionAgreementDataset):
+
+    INITIALIZE_CAPTIONER = 100
+
+    def __init__(self, world_generator, world_captioner, caption_size, vocabulary, correct_ratio=None, train_correct_ratio=None, validation_correct_ratio=None, test_correct_ratio=None, caption_realizer=None, language=None, number_texts=10):
+        '''All initially generated captions should agree with the image. Distractors randomly selected as non identical descriptions of other images'''
+        super(TextSelectionDataset, self).__init__(world_generator, world_captioner, caption_size, vocabulary, correct_ratio=1.0, train_correct_ratio=1.0, validation_correct_ratio=1.0, test_correct_ratio=1.0, caption_realizer=caption_realizer, language=language)
+        self.number_texts = number_texts
+        vocab = self.vocabularies['language']
+        self.idx2word = {}
+        for k, v in vocab.items():
+            self.idx2word[v] = k
+
+    def idx_2_captions(self, captions):
+        captions_str = []
+        for i in range(captions.shape[0]):
+            caption = ""
+            for j in range(captions.shape[1]):
+                caption += self.idx2word[captions[i][j]] + " "
+            captions_str.append(caption)
+        return captions_str
+    
+    def generate(self, n, mode=None, noise_range=None, include_model=False, alternatives=False):
+        print(f'Batch size: {n}, Number of texts: {self.number_texts}') 
+        batch = super(TextSelectionDataset, self).generate(n, mode=mode, noise_range=noise_range, include_model=include_model, alternatives=alternatives)
+        assert np.sum(batch['agreement']) == batch['agreement'].shape[0]
+        batch = self.add_caption_lists(batch, n)
+        print('================ Example prediction items, caption, and final texts  =================')
+        for i in range(min(10, n)):
+            print(f'i: {i}, pred items: {batch["pred_items"][i]}, caption: {batch["caption_str"][i]}\ntexts: {batch["texts_str"][i]}')
+        return batch
+
+    def add_caption_lists(self, batch, n):
+        batch = self.extract_prediction_items(batch, n)
+        max_len = batch['caption'].shape[1]
+        '''Get indices of other texts'''
+        '''There must be enough data'''
+        assert n >= 10 * self.number_texts
+        idxs = np.zeros((n, self.number_texts)).astype(int)
+        for i, item in enumerate(batch['pred_items']):
+            idxs[i] = self.get_caption_idxs(i, item, batch['pred_items'])
+        print("Selection of text idxs...")
+        print(idxs[:10])
+        batch['texts'] = np.zeros((n, self.number_texts, max_len))
+        batch['texts_str'] = [[] for _ in range(n)]
+        print(f'Batch texts shape: {batch["texts"].shape}')
+        '''Get relevant texts given indices'''
+        for i in range(n):
+            batch['texts'][i] = batch['caption'][idxs[i]]
+            captions = self.idx_2_captions(batch['texts'][i])
+            batch['texts_str'][i].extend(captions)
+        '''Convert captions to strings'''
+        batch['caption_str'] = self.idx_2_captions(batch['caption'])
+        return batch
+
+    def get_caption_idxs(self, i, item, pred_items):
+        idxs = [i]
+        n = len(pred_items)
+        candidate_idxs = np.random.randint(0, n, size=self.number_texts * 2).tolist()
+        while len(idxs) < self.number_texts:
+           if len(candidate_idxs) == 0:
+               candidate_idxs = np.random.randint(0, n, size=self.number_texts * 2).tolist()
+           idx = candidate_idxs.pop()
+           if (idx != i) and (set(pred_items[idx]) != set(item)):
+               idxs.append(idx)
+        shuffle(idxs)
+        idxs = np.asarray(idxs).astype(int)
+        return idxs
+
+    def get_prediction_item(self, caption_model):
+        items = []
+        if 'component' in caption_model:
+            if caption_model['component'] == 'EntityType':
+                vals = caption_model['value']
+                for k in vals:
+                    items.append(vals[k]['value'])
+        elif 'body' in caption_model:
+            comp = caption_model['body']['value']
+            for k in comp:
+                items.append(comp[k]['value'])
+            res = caption_model['restrictor']['value']
+            for k in res:
+                items.append(res[k]['value'])
+        return items
+
+    def extract_prediction_items(self, batch, n):
+        batch['pred_items'] = [[] for _ in range(n)]
+        for i, cap_model in enumerate(batch['caption_model']):
+            pred_items = self.get_prediction_item(cap_model)
+            batch['pred_items'][i].extend(pred_items)
+        return batch
