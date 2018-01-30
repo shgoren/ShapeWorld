@@ -216,30 +216,35 @@ class Dataset(object):
         if not os.path.isdir(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
 
+        print(f'self.values: {self.values}')
         with util.Archive(path=path, mode='w', archive=archive) as write_file:
             for value_name, value in generated.items():
-                Dataset.serialize_value(
-                    value=value,
-                    value_name=value_name,
-                    value_type=self.values[value_name],
-                    write_file=write_file,
-                    concat_worlds=concat_worlds,
-                    id2word=self.vocabulary(value_type=self.values[value_name])
-                )
-            if additional:
-                for value_name, (value, value_type) in additional.items():
+                if self.values[value_name] == 'skip':
+                    print(f'Skipping serializing {value_name}')
+                else:
+                    print(f'Serializing {value_name}')
                     Dataset.serialize_value(
                         value=value,
                         value_name=value_name,
-                        value_type=value_type,
+                        value_type=self.values[value_name],
                         write_file=write_file,
                         concat_worlds=concat_worlds,
                         id2word=self.vocabulary(value_type=self.values[value_name])
                     )
-            if html:
-                html = self.get_html(generated=generated)
-                assert html is not None
-                write_file(filename='data.html', value=html)
+                if additional:
+                    for value_name, (value, value_type) in additional.items():
+                        Dataset.serialize_value(
+                            value=value,
+                            value_name=value_name,
+                            value_type=value_type,
+                            write_file=write_file,
+                            concat_worlds=concat_worlds,
+                            id2word=self.vocabulary(value_type=self.values[value_name])
+                        )
+                if html:
+                    html = self.get_html(generated=generated)
+                    assert html is not None
+                    write_file(filename='data.html', value=html)
 
     @staticmethod
     def serialize_value(value, value_name, value_type, write_file, concat_worlds=False, id2word=None):
@@ -287,6 +292,12 @@ class Dataset(object):
         elif value_type == 'model':
             value = json.dumps(obj=value, indent=2, sort_keys=True)
             write_file(value_name + '.json', value)
+        elif value_type == 'str_list_list':
+            value = '\n'.join(' || '.join(x for x in elem) for elem in value) + '\n'
+            write_file(value_name + '.txt', value)
+        elif value_type == 'str_list':
+            value = '\n'.join(x for x in value) + '\n'
+            write_file(value_name + '.txt', value)
         else:
             assert id2word
             if alts:
@@ -358,6 +369,12 @@ class Dataset(object):
             value = read_file(value_name + '.json')
             value = json.loads(s=value)
             return value
+        elif value_type == 'str_list':
+            print('TODO')
+            assert True is False
+        elif value_type == 'str_list_list':
+            print('TODO')
+            assert True is False
         else:
             assert word2id
             value = read_file(value_name + '.txt')
@@ -845,6 +862,10 @@ class TextSelectionDataset(CaptionAgreementDataset):
         self.idx2word = {}
         for k, v in vocab.items():
             self.idx2word[v] = k
+
+    @property
+    def values(self):
+        return dict(world='world', world_model='model', caption='language', caption_length='int', caption_rpn='rpn', caption_rpn_length='int', caption_model='model', agreement='float', pred_items='str_list_list', caption_str = 'str_list', texts='skip', texts_str='str_list_list')
 
     def idx_2_captions(self, captions):
         captions_str = []
