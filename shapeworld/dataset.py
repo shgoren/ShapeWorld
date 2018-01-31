@@ -974,18 +974,20 @@ class TextSelectionDataset(CaptionAgreementDataset):
                 agreement = 'incorrect'
             else:
                 agreement = 'ambiguous'
-            cap = "Prediction items: "
+            pred_item = "Prediction items: "
             for p in pred:
-                cap += p + ", "
-            cap +="Caption: " + util.tokens2string(id2word[word] for word in caption[:caption_length])
-            cap += ' Texts: '
+                pred_item += p + ", "
+            cap = "Caption: " + util.tokens2string(id2word[word] for word in caption[:caption_length])
+            text = 'Texts: '
             for t in texts:
-                cap += t + ", "
-            data_html.append('<div class="{agreement}"><div class="world"><img src="world-{world}.bmp" alt="world-{world}.bmp"></div><div class="num"><p><b>({num})</b></p></div><div class="caption"><p>{caption}</p></div></div>'.format(
+                text += t + ", "
+            data_html.append('<div class="{agreement}"><div class="world"><img src="world-{world}.bmp" alt="world-{world}.bmp"></div><div class="num"><p><b>({num})</b></p></div><div class="caption"><p>{pred_item}</p><p>{caption}</p><p>{text}</p></div></div>'.format(
                 agreement=agreement,
                 world=n,
                 num=(n + 1),
-                caption=cap
+                pred_item=pred_item,
+                caption=cap,
+                text=text
             ))
         html = '<!DOCTYPE html><html><head><title>{dtype} {name}</title><style>.data{{width: 100%; height: 100%;}} .correct{{width: 100%; margin-top: 1px; margin-bottom: 1px; background-color: #BBFFBB;}} .incorrect{{width: 100%; margin-top: 1px; margin-bottom: 1px; background-color: #FFBBBB;}} .ambiguous{{width: 100%; margin-top: 1px; margin-bottom: 1px; background-color: #FFFFBB;}} .world{{height: {world_height}px; display: inline-block; vertical-align: middle;}} .num{{display: inline-block; vertical-align: middle; margin-left: 10px;}} .caption{{display: inline-block; vertical-align: middle; margin-left: 10px;}}</style></head><body><div class="data">{data}</div></body></html>'.format(
             dtype=self.type,
