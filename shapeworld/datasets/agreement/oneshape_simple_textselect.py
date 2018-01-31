@@ -12,7 +12,7 @@ class OneshapeSimpleTextselect(TextSelectionDataset):
         caption_size=6,
         vocabulary=('.', 'a', 'an', 'blue', 'circle', 'cross', 'cyan', 'ellipse', 'gray', 'green', 'is', 'magenta', 'pentagon', 'rectangle', 'red', 'semicircle', 'shape', 'square', 'there', 'triangle', 'yellow'),
         language=None,
-        number_texts=3, 
+        number_texts=10, 
     ):
 
         world_generator = RandomAttributesGenerator(
@@ -23,6 +23,7 @@ class OneshapeSimpleTextselect(TextSelectionDataset):
             collision_tolerance=0.0,
             boundary_tolerance=0.0
         )
+        world_generator.world_size = 128
 
         world_captioner = RegularTypeCaptioner(
             existing_attribute_rate=0.0
