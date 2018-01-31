@@ -216,7 +216,6 @@ class Dataset(object):
         if not os.path.isdir(os.path.dirname(path)):
             os.makedirs(os.path.dirname(path))
 
-        print(f'self.values: {self.values}')
         with util.Archive(path=path, mode='w', archive=archive) as write_file:
             for value_name, value in generated.items():
                 if self.values[value_name] == 'skip':

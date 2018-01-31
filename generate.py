@@ -30,8 +30,9 @@ if __name__ == '__main__':
     parser.add_argument('-H', '--html', action='store_true', help='Create HTML file showing the generated data')
     # parser.add_argument('-v', '--values', default=None, help='Comma-separated list of values to include')
     args = parser.parse_args()
-
+    print(args.name)
     dataset = dataset(dtype=args.type, name=args.name, language=args.language, config=args.config)
+    print(dataset.name)
     sys.stdout.write('{time} {dataset}\n'.format(time=datetime.now().strftime('%H:%M:%S'), dataset=dataset))
     sys.stdout.write('         config: {config}\n'.format(config=args.config))
     sys.stdout.flush()

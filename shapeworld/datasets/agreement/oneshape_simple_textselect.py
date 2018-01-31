@@ -3,7 +3,7 @@ from shapeworld.generators import RandomAttributesGenerator
 from shapeworld.captioners import RegularTypeCaptioner
 
 
-class OneshapeSimple(TextSelectionDataset):
+class OneshapeSimpleTextselect(TextSelectionDataset):
 
     def __init__(
         self,
@@ -28,7 +28,7 @@ class OneshapeSimple(TextSelectionDataset):
             existing_attribute_rate=0.0
         )
 
-        super(OneshapeSimple, self).__init__(
+        super(OneshapeSimpleTextselect, self).__init__(
             world_generator=world_generator,
             world_captioner=world_captioner,
             caption_size=caption_size,
@@ -38,4 +38,4 @@ class OneshapeSimple(TextSelectionDataset):
         )
 
 
-dataset = OneshapeSimple
+dataset = OneshapeSimpleTextselect
