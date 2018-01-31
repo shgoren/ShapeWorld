@@ -958,3 +958,39 @@ class TextSelectionDataset(CaptionAgreementDataset):
             pred_items = self.get_prediction_item(cap_model)
             batch['pred_items'][i].extend(pred_items)
         return batch
+
+    def get_html(self, generated):
+        id2word = self.vocabulary(value_type='language')
+        captions = generated['caption']
+        caption_lengths = generated['caption_length']
+        texts_lists = generated['texts_str']
+        agreements = generated['agreement']
+        pred_items = generated['pred_items']
+        data_html = list()
+        for n, (caption, texts, agreement, caption_length, pred) in enumerate(zip(captions, texts_lists,  agreements, caption_lengths, pred_items)):
+            if agreement == 1.0:
+                agreement = 'correct'
+            elif agreement == 0.0:
+                agreement = 'incorrect'
+            else:
+                agreement = 'ambiguous'
+            cap = "Prediction items: "
+            for p in pred:
+                cap += p + ", "
+            cap +="Caption: " + util.tokens2string(id2word[word] for word in caption[:caption_length])
+            cap += ' Texts: '
+            for t in texts:
+                cap += t + ", "
+            data_html.append('<div class="{agreement}"><div class="world"><img src="world-{world}.bmp" alt="world-{world}.bmp"></div><div class="num"><p><b>({num})</b></p></div><div class="caption"><p>{caption}</p></div></div>'.format(
+                agreement=agreement,
+                world=n,
+                num=(n + 1),
+                caption=cap
+            ))
+        html = '<!DOCTYPE html><html><head><title>{dtype} {name}</title><style>.data{{width: 100%; height: 100%;}} .correct{{width: 100%; margin-top: 1px; margin-bottom: 1px; background-color: #BBFFBB;}} .incorrect{{width: 100%; margin-top: 1px; margin-bottom: 1px; background-color: #FFBBBB;}} .ambiguous{{width: 100%; margin-top: 1px; margin-bottom: 1px; background-color: #FFFFBB;}} .world{{height: {world_height}px; display: inline-block; vertical-align: middle;}} .num{{display: inline-block; vertical-align: middle; margin-left: 10px;}} .caption{{display: inline-block; vertical-align: middle; margin-left: 10px;}}</style></head><body><div class="data">{data}</div></body></html>'.format(
+            dtype=self.type,
+            name=self.name,
+            world_height=self.world_shape[0],
+            data=''.join(data_html)
+        )
+        return html
