@@ -1,5 +1,6 @@
 from importlib import import_module
 from io import BytesIO
+import pprint
 import json
 import pprint
 from math import ceil, sqrt
@@ -939,18 +940,27 @@ class TextSelectionDataset(CaptionAgreementDataset):
 
     def get_prediction_item(self, caption_model):
         items = []
+        #pprint.pprint(caption_model)
         if 'component' in caption_model:
             if caption_model['component'] == 'EntityType':
                 vals = caption_model['value']
                 for k in vals:
                     items.append(vals[k]['value'])
-        elif 'body' in caption_model:
-            comp = caption_model['body']['value']
-            for k in comp:
-                items.append(comp[k]['value'])
+        if 'body' in caption_model:
+            comp = caption_model['body']['value']['component']
+            if comp == 'EntityType':
+                vals = caption_model['body']['value']['value']
+                for k in vals:
+                    items.append(vals[k]['value'])
+            elif comp == 'Attribute':
+                items.append(caption_model['body']['value']['value'])
+            assert caption_model['restrictor']['component'] == 'EntityType'
             res = caption_model['restrictor']['value']
             for k in res:
                 items.append(res[k]['value'])
+        items = list(set(items))
+        #print(f'Items: {items}')
+        assert len(caption_model) > 0
         return items
 
     def extract_prediction_items(self, batch, n):
