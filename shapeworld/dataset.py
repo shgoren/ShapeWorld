@@ -186,6 +186,10 @@ class Dataset(object):
                     batch[value_name] = [[np.zeros(shape=self.vector_shape(value_name), dtype=np.float32)] for _ in range(n)]
                 elif value_type == 'model' and include_model:
                     batch[value_name] = [[] for _ in range(n)]
+                elif value_type == 'str_list':
+                    batch[value_name] = ["" for _ in range(n)]
+                elif value_type == 'str_list_list':
+                    batch[value_name] = [[] for _ in range(n)]
             else:
                 if value_type == 'int' and (value_name != 'alternatives' or alternatives):
                     batch[value_name] = np.zeros(shape=(n,), dtype=np.int32)
@@ -199,6 +203,10 @@ class Dataset(object):
                     batch[value_name] = np.zeros(shape=((n,) + self.world_shape), dtype=np.float32)
                 elif value_type == 'model' and include_model:
                     batch[value_name] = [None] * n
+                elif value_type == 'str_list':
+                    batch[value_name] = ["" for _ in range(n)]
+                elif value_type == 'str_list_list':
+                    batch[value_name] = [[] for _ in range(n)]
         return batch
 
     def generate(self, n, mode=None, noise_range=None, include_model=False, alternatives=False):  # mode: None, 'train', 'validation', 'test'
@@ -369,11 +377,13 @@ class Dataset(object):
             value = json.loads(s=value)
             return value
         elif value_type == 'str_list':
-            print('TODO')
-            assert True is False
+            value = read_file(value_name + '.txt')
+            value = [caption for caption in value.split('\n')[:-1]]
+            return value
         elif value_type == 'str_list_list':
-            print('TODO')
-            assert True is False
+            value = read_file(value_name + '.txt')
+            value = [[caption for caption in cap_list.split(' || ')] for cap_list in value.split('\n')[:-1]] 
+            return value
         else:
             assert word2id
             value = read_file(value_name + '.txt')
@@ -463,24 +473,29 @@ class LoadedDataset(Dataset):
             self.num_instances = 0
             with util.Archive(path=path, mode='r', archive=self.archive) as read_file:
                 for value_name, value in self.loaded.items():
-                    value.extend(Dataset.deserialize_value(
-                        value_name=value_name,
-                        value_type=self.values[value_name],
-                        read_file=read_file,
-                        num_concat_worlds=self.num_concat_worlds,
-                        word2id=self.vocabularies.get(self.values[value_name])
-                    ))
-                    if self.num_instances:
-                        assert len(value) == self.num_instances
+                    if self.values[value_name] == 'skip':
+                        print(f'Skipping deserializing {value_name}')
                     else:
-                        self.num_instances = len(value)
-
+                        print(f'Deserializing {value_name}')
+                        value.extend(Dataset.deserialize_value(
+                            value_name=value_name,
+                            value_type=self.values[value_name],
+                            read_file=read_file,
+                            num_concat_worlds=self.num_concat_worlds,
+                            word2id=self.vocabularies.get(self.values[value_name])
+                        ))
+                        if self.num_instances:
+                            assert len(value) == self.num_instances
+                        else:
+                            self.num_instances = len(value)
         batch = self.zero_batch(n, include_model=include_model, alternatives=alternatives)
         for i in range(n):
             index = randrange(self.num_instances)
             self.num_instances -= 1
             for value_name, value_type in self.values.items():
                 if value_type in ('model', 'alts(model)') and not self.include_model:
+                    continue
+                if value_type == 'skip':
                     continue
                 value = self.loaded[value_name].pop(index)
                 if value_type in self.vocabularies:
@@ -876,7 +891,7 @@ class TextSelectionDataset(CaptionAgreementDataset):
         return captions_str
     
     def generate(self, n, mode=None, noise_range=None, include_model=False, alternatives=False):
-        print(f'Batch size: {n}, Number of texts: {self.number_texts}') 
+        print(f'\nBatch size: {n}, Number of texts: {self.number_texts}') 
         batch = super(TextSelectionDataset, self).generate(n, mode=mode, noise_range=noise_range, include_model=include_model, alternatives=alternatives)
         assert np.sum(batch['agreement']) == batch['agreement'].shape[0]
         batch = self.add_caption_lists(batch, n)
@@ -897,7 +912,6 @@ class TextSelectionDataset(CaptionAgreementDataset):
         print("Selection of text idxs...")
         print(idxs[:10])
         batch['texts'] = np.zeros((n, self.number_texts, max_len))
-        batch['texts_str'] = [[] for _ in range(n)]
         print(f'Batch texts shape: {batch["texts"].shape}')
         '''Get relevant texts given indices'''
         for i in range(n):
@@ -906,6 +920,7 @@ class TextSelectionDataset(CaptionAgreementDataset):
             batch['texts_str'][i].extend(captions)
         '''Convert captions to strings'''
         batch['caption_str'] = self.idx_2_captions(batch['caption'])
+        assert len(batch['caption_str']) == n
         return batch
 
     def get_caption_idxs(self, i, item, pred_items):
@@ -939,7 +954,6 @@ class TextSelectionDataset(CaptionAgreementDataset):
         return items
 
     def extract_prediction_items(self, batch, n):
-        batch['pred_items'] = [[] for _ in range(n)]
         for i, cap_model in enumerate(batch['caption_model']):
             pred_items = self.get_prediction_item(cap_model)
             batch['pred_items'][i].extend(pred_items)
