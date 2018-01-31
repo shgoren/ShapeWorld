@@ -768,6 +768,23 @@ class CaptionAgreementDataset(Dataset):
                         break
 
                 caption = self.world_captioner(world=world)
+                '''Testing variability of captions'''
+               # print(f'20 captions generated for image {i}')
+               # cap_eg = caption
+               # caps = []
+               # for _ in range(20):
+               #     self.world_captioner.initialize(mode=mode, correct=correct)
+               #     cap_eg = self.world_captioner(world=world)
+               #     try:
+               #         cap = self.caption_realizer.realize(captions=[cap_eg])
+               #         cap = ' '.join([word for word in cap[0]])
+               #     except:
+               #         print("DMR realizer assertion error")
+               #         cap = ""
+               #     caps.append(cap)
+               # caps = set(caps)
+               # print(f'Num distinct captions: {len(caps)}\nCaptions: {caps}')
+               # print("==============================================")
                 if caption is not None:
                     break
                 else:

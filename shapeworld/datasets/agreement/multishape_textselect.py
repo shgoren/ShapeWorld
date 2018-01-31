@@ -16,7 +16,7 @@ class MultishapeTextselect(TextSelectionDataset):
         caption_size=8,
         vocabulary=('.', 'a', 'an', 'blue', 'circle', 'cross', 'cyan', 'ellipse', 'gray', 'green', 'is', 'magenta', 'pentagon', 'rectangle', 'red', 'semicircle', 'shape', 'square', 'there', 'triangle', 'yellow'),
         language=None,
-        number_texts=3
+        number_texts=10
     ):
 
         world_generator = RandomAttributesGenerator(
