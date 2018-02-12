@@ -420,6 +420,7 @@ class LoadedDataset(Dataset):
                 mode = root[len(self.directory) + 1:]
                 if dirs:
                     assert all(d[:4] == 'part' and d[4:].isdigit() for d in dirs)
+                    print(dirs, files)
                     assert not files
                     self.parts[mode] = [os.path.join(root, d) for d in dirs]
                 else:
@@ -897,7 +898,7 @@ class TextSelectionDataset(CaptionAgreementDataset):
 
     @property
     def values(self):
-        return dict(world='world', world_model='model', caption='language', caption_length='int', caption_rpn='rpn', caption_rpn_length='int', caption_model='model', agreement='float', pred_items='str_list_list', caption_str = 'str_list', texts='skip', texts_str='str_list_list')
+        return dict(world='world', world_model='model', caption='language', caption_length='int', caption_rpn='rpn', caption_rpn_length='int', caption_model='model', agreement='float', pred_items='str_list_list', caption_str = 'str_list', texts='skip', texts_str='str_list_list', target='int')
 
     def idx_2_captions(self, captions):
         captions_str = []
@@ -925,8 +926,12 @@ class TextSelectionDataset(CaptionAgreementDataset):
         '''There must be enough data'''
         assert n >= 10 * self.number_texts
         idxs = np.zeros((n, self.number_texts)).astype(int)
+        print(f'Batch targets shape: {batch["target"].shape}')
         for i, item in enumerate(batch['pred_items']):
             idxs[i] = self.get_caption_idxs(i, item, batch['pred_items'])
+            batch['target'][i] = np.where(idxs[i]==i)[0]
+            #print(idxs[i])
+            #print(batch['target'][i])
         print("Selection of text idxs...")
         print(idxs[:10])
         batch['texts'] = np.zeros((n, self.number_texts, max_len))
@@ -993,8 +998,9 @@ class TextSelectionDataset(CaptionAgreementDataset):
         texts_lists = generated['texts_str']
         agreements = generated['agreement']
         pred_items = generated['pred_items']
+        targets = generated['target']
         data_html = list()
-        for n, (caption, texts, agreement, caption_length, pred) in enumerate(zip(captions, texts_lists,  agreements, caption_lengths, pred_items)):
+        for n, (caption, texts, agreement, caption_length, pred, t) in enumerate(zip(captions, texts_lists,  agreements, caption_lengths, pred_items, targets)):
             if agreement == 1.0:
                 agreement = 'correct'
             elif agreement == 0.0:
@@ -1005,6 +1011,7 @@ class TextSelectionDataset(CaptionAgreementDataset):
             for p in pred:
                 pred_item += p + ", "
             cap = "Caption: " + util.tokens2string(id2word[word] for word in caption[:caption_length])
+            cap += " Target idx: " + str(t)
             text = 'Texts: '
             for t in texts:
                 text += t + ", "
