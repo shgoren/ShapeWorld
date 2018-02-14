@@ -229,6 +229,7 @@ class Dataset(object):
             for value_name, value in generated.items():
                 if self.values[value_name] == 'skip':
                     # print(f'Skipping serializing {value_name}')
+                    pass
                 else:
                     # print(f'Serializing {value_name}')
                     Dataset.serialize_value(
@@ -477,6 +478,7 @@ class LoadedDataset(Dataset):
                 for value_name, value in self.loaded.items():
                     if self.values[value_name] == 'skip':
                         # print(f'Skipping deserializing {value_name}')
+                        pass
                     else:
                         # print(f'Deserializing {value_name}')
                         value.extend(Dataset.deserialize_value(
