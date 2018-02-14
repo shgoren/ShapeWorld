@@ -1032,3 +1032,41 @@ class TextSelectionDataset(CaptionAgreementDataset):
             data=''.join(data_html)
         )
         return html
+
+
+class TextSelectionMultiShapeDataset(TextSelectionDataset):
+
+    INITIALIZE_CAPTIONER = 100
+
+    def extract_prediction_items(self, batch, n):
+        # TODO update to extract world
+        for i, cap_model in enumerate(batch['caption_model']):
+            pred_items = self.get_prediction_item(cap_model)
+            batch['pred_items'][i].extend(pred_items)
+        return batch
+
+    def get_prediction_item(self, caption_model):
+        items = []
+        # TODO extract from world
+        #pprint.pprint(caption_model)
+        if 'component' in caption_model:
+            if caption_model['component'] == 'EntityType':
+                vals = caption_model['value']
+                for k in vals:
+                    items.append(vals[k]['value'])
+        if 'body' in caption_model:
+            comp = caption_model['body']['value']['component']
+            if comp == 'EntityType':
+                vals = caption_model['body']['value']['value']
+                for k in vals:
+                    items.append(vals[k]['value'])
+            elif comp == 'Attribute':
+                items.append(caption_model['body']['value']['value'])
+            assert caption_model['restrictor']['component'] == 'EntityType'
+            res = caption_model['restrictor']['value']
+            for k in res:
+                items.append(res[k]['value'])
+        items = list(set(items))
+        #print(f'Items: {items}')
+        assert len(caption_model) > 0
+        return items

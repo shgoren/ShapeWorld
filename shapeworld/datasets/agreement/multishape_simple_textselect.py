@@ -1,16 +1,16 @@
-from shapeworld.dataset import CaptionAgreementDataset, TextSelectionDataset
+from shapeworld.dataset import CaptionAgreementDataset, TextSelectionMultiShapeDataset
 from shapeworld.generators import RandomAttributesGenerator
 from shapeworld.captioners import RegularTypeCaptioner
 
 
-class MultishapeSimpleTextselect(TextSelectionDataset):
+class MultishapeSimpleTextselect(TextSelectionMultiShapeDataset):
 
     def __init__(
         self,
-        entity_counts=(2, 3, 4, 5, 6, 7, 8),
-        train_entity_counts=(2, 3, 4, 5, 7),
-        validation_entity_counts=(6,),
-        test_entity_counts=(8,),
+        entity_counts=(2, 3),
+        train_entity_counts=(2, 3),
+        validation_entity_counts=(2, 3),
+        test_entity_counts=(2, 3),
         validation_combinations=(('square', 'red', 'solid'), ('triangle', 'green', 'solid'), ('circle', 'blue', 'solid')),
         test_combinations=(('rectangle', 'yellow', 'solid'), ('cross', 'magenta', 'solid'), ('ellipse', 'cyan', 'solid')),
         caption_size=6,
