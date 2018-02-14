@@ -7,10 +7,10 @@ class MultishapeSimpleTextselect(TextSelectionMultiShapeDataset):
 
     def __init__(
         self,
-        entity_counts=(2, 3),
-        train_entity_counts=(2, 3),
-        validation_entity_counts=(2, 3),
-        test_entity_counts=(2, 3),
+        entity_counts=(2,),
+        train_entity_counts=(2,),
+        validation_entity_counts=(2,),
+        test_entity_counts=(2,),
         validation_combinations=(('square', 'red', 'solid'), ('triangle', 'green', 'solid'), ('circle', 'blue', 'solid')),
         test_combinations=(('rectangle', 'yellow', 'solid'), ('cross', 'magenta', 'solid'), ('ellipse', 'cyan', 'solid')),
         caption_size=6,

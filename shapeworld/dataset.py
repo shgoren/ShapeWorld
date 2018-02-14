@@ -1,4 +1,5 @@
 from importlib import import_module
+import sys
 from io import BytesIO
 import pprint
 import json
@@ -191,6 +192,8 @@ class Dataset(object):
                     batch[value_name] = ["" for _ in range(n)]
                 elif value_type == 'str_list_list':
                     batch[value_name] = [[] for _ in range(n)]
+                elif value_type == 'str_list_list_list':
+                    batch[value_name] = [[] for _ in range(n)]
             else:
                 if value_type == 'int' and (value_name != 'alternatives' or alternatives):
                     batch[value_name] = np.zeros(shape=(n,), dtype=np.int32)
@@ -207,6 +210,8 @@ class Dataset(object):
                 elif value_type == 'str_list':
                     batch[value_name] = ["" for _ in range(n)]
                 elif value_type == 'str_list_list':
+                    batch[value_name] = [[] for _ in range(n)]
+                elif value_type == 'str_list_list_list':
                     batch[value_name] = [[] for _ in range(n)]
         return batch
 
@@ -304,6 +309,9 @@ class Dataset(object):
         elif value_type == 'str_list_list':
             value = '\n'.join(' || '.join(x for x in elem) for elem in value) + '\n'
             write_file(value_name + '.txt', value)
+        elif value_type == 'str_list_list_list':
+            value = '\n'.join(' || '.join(', '.join(x for x in it) for it in elem) for elem in value) + '\n'
+            write_file(value_name + '.txt', value)
         elif value_type == 'str_list':
             value = '\n'.join(x for x in value) + '\n'
             write_file(value_name + '.txt', value)
@@ -385,6 +393,10 @@ class Dataset(object):
         elif value_type == 'str_list_list':
             value = read_file(value_name + '.txt')
             value = [[caption for caption in cap_list.split(' || ')] for cap_list in value.split('\n')[:-1]]
+            return value
+        elif value_type == 'str_list_list_list':
+            value = read_file(value_name + '.txt')
+            value = [[[it for it in items.split(', ')] for items in pred_item.split(' || ')] for pred_item in value.split('\n')[:-1]]
             return value
         else:
             assert word2id
@@ -984,7 +996,7 @@ class TextSelectionDataset(CaptionAgreementDataset):
                 items.append(res[k]['value'])
         items = list(set(items))
         #print(f'Items: {items}')
-        assert len(caption_model) > 0
+        assert len(items) > 0
         return items
 
     def extract_prediction_items(self, batch, n):
@@ -1037,36 +1049,88 @@ class TextSelectionDataset(CaptionAgreementDataset):
 class TextSelectionMultiShapeDataset(TextSelectionDataset):
 
     INITIALIZE_CAPTIONER = 100
+    
+    @property
+    def values(self):
+        return dict(world='world', world_model='model', caption='language', caption_length='int', caption_rpn='rpn', caption_rpn_length='int', caption_model='model', agreement='float', pred_items='str_list_list_list', caption_str = 'str_list', texts='skip', texts_str='str_list_list', target='int')
+
 
     def extract_prediction_items(self, batch, n):
-        # TODO update to extract world
-        for i, cap_model in enumerate(batch['caption_model']):
+        for i, cap_model in enumerate(batch['world_model']):
             pred_items = self.get_prediction_item(cap_model)
             batch['pred_items'][i].extend(pred_items)
         return batch
 
-    def get_prediction_item(self, caption_model):
+    def get_prediction_item(self, world_model):
         items = []
-        # TODO extract from world
-        #pprint.pprint(caption_model)
-        if 'component' in caption_model:
-            if caption_model['component'] == 'EntityType':
-                vals = caption_model['value']
-                for k in vals:
-                    items.append(vals[k]['value'])
-        if 'body' in caption_model:
-            comp = caption_model['body']['value']['component']
-            if comp == 'EntityType':
-                vals = caption_model['body']['value']['value']
-                for k in vals:
-                    items.append(vals[k]['value'])
-            elif comp == 'Attribute':
-                items.append(caption_model['body']['value']['value'])
-            assert caption_model['restrictor']['component'] == 'EntityType'
-            res = caption_model['restrictor']['value']
-            for k in res:
-                items.append(res[k]['value'])
-        items = list(set(items))
-        #print(f'Items: {items}')
-        assert len(caption_model) > 0
+        entities = world_model['entities']
+        for e in entities:
+            shape = e['shape']['name']
+            color = e['color']['name']
+            items.append([shape, color])
+        assert len(items) > 0
         return items
+    
+    def get_caption_idxs(self, i, item, pred_items):
+        idxs = [i]
+        n = len(pred_items)
+        candidate_idxs = np.random.randint(0, n, size=self.number_texts * 2).tolist()
+        while len(idxs) < self.number_texts:
+           if len(candidate_idxs) == 0:
+               candidate_idxs = np.random.randint(0, n, size=self.number_texts * 2).tolist()
+           idx = candidate_idxs.pop()
+           flag = True
+           if (idx == i):
+               flag = False
+           for p in pred_items[idx]:
+               for it in item:
+                   if set(p) == set(it):
+                       flag = False
+           if flag:
+               idxs.append(idx)
+        shuffle(idxs)
+        idxs = np.asarray(idxs).astype(int)
+        return idxs
+    
+    def get_html(self, generated):
+        id2word = self.vocabulary(value_type='language')
+        captions = generated['caption']
+        caption_lengths = generated['caption_length']
+        texts_lists = generated['texts_str']
+        agreements = generated['agreement']
+        pred_items = generated['pred_items']
+        targets = generated['target']
+        data_html = list()
+        for n, (caption, texts, agreement, caption_length, pred, t) in enumerate(zip(captions, texts_lists,  agreements, caption_lengths, pred_items, targets)):
+            if agreement == 1.0:
+                agreement = 'correct'
+            elif agreement == 0.0:
+                agreement = 'incorrect'
+            else:
+                agreement = 'ambiguous'
+            pred_item = "Prediction items: "
+            for p in pred:
+                pred_item += "["
+                for elem in p:
+                    pred_item += elem + ", "
+                pred_item += "], "
+            cap = "Caption: " + util.tokens2string(id2word[word] for word in caption[:caption_length])
+            cap += " Target idx: " + str(t)
+            text = 'Texts: '
+            for t in texts:
+                text += t + ", "
+            data_html.append('<div class="{agreement}"><div class="world"><img src="world-{world}.bmp" alt="world-{world}.bmp"></div><div class="num"><p><b>({num})</b></p></div><div class="caption"><p>{pred_item}</p><p>{caption}</p><p>{text}</p></div></div>'.format(
+                agreement=agreement,
+                world=n,
+                num=(n + 1),
+                pred_item=pred_item,
+                caption=cap,
+                text=text
+            ))
+        html = '<!DOCTYPE html><html><head><title>{dtype} {name}</title><style>.data{{width: 100%; height: 100%;}} .correct{{width: 100%; margin-top: 1px; margin-bottom: 1px; background-color: #BBFFBB;}} .incorrect{{width: 100%; margin-top: 1px; margin-bottom: 1px; background-color: #FFBBBB;}} .ambiguous{{width: 100%; margin-top: 1px; margin-bottom: 1px; background-color: #FFFFBB;}} .world{{height: {world_height}px; display: inline-block; vertical-align: middle;}} .num{{display: inline-block; vertical-align: middle; margin-left: 10px;}} .caption{{display: inline-block; vertical-align: middle; margin-left: 10px;}}</style></head><body><div class="data">{data}</div></body></html>'.format(
+            dtype=self.type,
+            name=self.name,
+            world_height=self.world_shape[0],
+            data=''.join(data_html)
+        )
+        return html
