@@ -3,7 +3,7 @@
 ### Getting started
 
 ```bash
-git clone --recursive https://github.com/AlexKuhnle/ShapeWorld.git
+git clone --recursive https://github.com/lgraesser/ShapeWorld.git
 pip3 install -e ShapeWorld
 ```
 
