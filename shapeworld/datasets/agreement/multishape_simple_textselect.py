@@ -7,12 +7,12 @@ class MultishapeSimpleTextselect(TextSelectionMultiShapeDataset):
 
     def __init__(
         self,
-        entity_counts=(2,),
-        train_entity_counts=(2,),
-        validation_entity_counts=(2,),
-        test_entity_counts=(2,),
-        validation_combinations=(('square', 'red', 'solid'), ('triangle', 'green', 'solid'), ('circle', 'blue', 'solid')),
-        test_combinations=(('rectangle', 'yellow', 'solid'), ('cross', 'magenta', 'solid'), ('ellipse', 'cyan', 'solid')),
+        entity_counts=(3,),
+        train_entity_counts=(3,),
+        validation_entity_counts=(3,),
+        test_entity_counts=(3,),
+        validation_combinations=(('square', 'red', 'solid'), ('triangle', 'green', 'solid'), ('circle', 'blue', 'solid'), ('rectangle', 'yellow', 'solid'), ('cross', 'magenta', 'solid'), ('ellipse', 'cyan', 'solid')),
+        test_combinations=(('square', 'red', 'solid'), ('triangle', 'green', 'solid'), ('circle', 'blue', 'solid'), ('rectangle', 'yellow', 'solid'), ('cross', 'magenta', 'solid'), ('ellipse', 'cyan', 'solid')),
         caption_size=6,
         vocabulary=('.', 'a', 'an', 'blue', 'circle', 'cross', 'cyan', 'ellipse', 'gray', 'green', 'is', 'magenta', 'pentagon', 'rectangle', 'red', 'semicircle', 'shape', 'square', 'there', 'triangle', 'yellow'),
         language=None,
