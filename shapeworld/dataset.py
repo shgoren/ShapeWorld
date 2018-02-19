@@ -32,6 +32,7 @@ def dataset(dtype=None, name=None, language=None, config=None):
         if mix and not os.path.isfile(config):
             return DatasetMixer(datasets=config.split(','))
         if load and os.path.isdir(config):
+            print(f'CONFIG: {config}')
             assert dtype and name
             if language is None:
                 directory = os.path.join(config, dtype, name)
