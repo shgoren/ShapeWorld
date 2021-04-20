@@ -504,7 +504,14 @@ class Archive(object):
         if not os.path.isdir('/tmp/shapeworld'):
             os.makedirs('/tmp/shapeworld')
         self.temp_directory = os.path.join('/tmp/shapeworld', str(time.time()))
-        os.mkdir(self.temp_directory)
+        try:
+            os.mkdir(self.temp_directory)
+        except PermissionError:
+            if not os.path.isdir('/tmp/shapeworld_shahaf'):
+                os.makedirs('/tmp/shapeworld_shahaf')
+            self.temp_directory = os.path.join('/tmp/shapeworld_shahaf', str(time.time()))
+            os.mkdir(self.temp_directory)
+
         if archive is None:
             self.archive_type = None
             if not os.path.isdir(self.archive):
